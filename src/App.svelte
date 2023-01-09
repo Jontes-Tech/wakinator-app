@@ -1,31 +1,47 @@
 <script lang="ts">
   import "./app.css";
-  if (!localStorage.getItem("hosts")) {
-    localStorage.setItem("hosts", JSON.stringify({}));
-  }
-
-  let showModal = false;
-  let content: string;
+  const params = new URLSearchParams(window.location.search);
+  let showModal = params.get("showModal") ? true : false;
+  let content = params.get("content");
+  if (showModal && !content) content = "start";
 
   function toggleModal() {
     showModal = !showModal;
   }
 
-  const getServers = async () => {
+  interface Server {
+    friendlyname: string;
+    macadress: string;
+    ip: string;
+    port: number;
+    token: string;
+    url: string;
+  }
+
+  interface ServersResponse {
+    [key: string]: Server;
+  }
+
+  type GetServersFn = () => Promise<ServersResponse>;
+
+  const getServers:GetServersFn = async () => {
     const response = await fetch(
-      JSON.parse(sessionStorage.getItem("host")).url + "/api/list/boxes",
+      JSON.parse(sessionStorage.getItem("host")).url +
+        "/api/list/boxes?passwd=" +
+        encodeURIComponent(JSON.parse(sessionStorage.getItem("host")).token),
       {
-        method: "POST",
-        body: JSON.stringify({
-          passwd: JSON.parse(sessionStorage.getItem("host")).token,
-        }),
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
         },
       }
     );
-    const result = await response.json();
+    let result = await response.json();
+    for (const key in result) {
+      result[key].token = JSON.parse(sessionStorage.getItem("host")).token;
+      result[key].url = JSON.parse(sessionStorage.getItem("host")).url;
+    }
+    result.token = JSON.parse(sessionStorage.getItem("host")).token;
     return result;
   };
 
@@ -33,9 +49,20 @@
 
   let api_token: string, api_url: string;
 
-  let myhosts = JSON.parse(localStorage.getItem("hosts"));
+  import { hosts } from "./stores/hosts";
 
   let editmode = false;
+
+  function deleteProperty(key: string) {
+    const newStore = { ...$hosts };
+    delete newStore[key];
+    hosts.set(newStore);
+  }
+
+  function addKey(key: string, value: any) {
+    const newStore = { ...$hosts, [key]: value };
+    hosts.set(newStore);
+  }
 </script>
 
 {#if showModal}
@@ -102,21 +129,9 @@
                   <div class="flex items-center mb-4">
                     <button
                       on:click={() => {
-                        if (!localStorage.getItem("hosts")) {
-                          localStorage.setItem("hosts", JSON.stringify({}));
-                        }
-                        let before = JSON.parse(localStorage.getItem("hosts"));
-                        before[host[0]] = host[1];
-                        before[host[0]].token = JSON.parse(
-                          sessionStorage.getItem("host")
-                        ).token;
-                        before[host[0]].url = JSON.parse(
-                          sessionStorage.getItem("host")
-                        ).url;
-                        localStorage.setItem("hosts", JSON.stringify(before));
-                        myhosts = JSON.parse(localStorage.getItem("hosts"));
+                        addKey(host[0], host[1]);
                       }}
-                      class="w-48 ml-2 text-sm font-medium text-stone-900 text-stone-300 p-2 rounded shadow-lg bg-emerald-600"
+                      class="w-48 ml-2 text-sm font-medium text-stone-300 p-2 rounded shadow-lg bg-emerald-600"
                     >
                       {host[1].friendlyname}
                     </button>
@@ -191,6 +206,7 @@
       <button
         type="button"
         on:click={() => {
+          editmode = false;
           content = "start";
           toggleModal();
         }}
@@ -202,37 +218,53 @@
   <div
     class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
   >
-    {#each Object.entries(myhosts) as myhost}
-      <div
-        class="{editmode
-          ? 'moveFromSideToSide'
-          : ''} max-w-sm m-4 p-6 border rounded-lg shadow-md bg-stone-800 border-stone-700"
-      >
-        <h5 class="mb-2 text-2xl font-bold tracking-tight text-white">
-          {myhost[1].friendlyname}
-        </h5>
-        <p class="mb-3 font-normal text-stone-400">
-          {myhost[1].macadress}
-        </p>
-        {#if !editmode}
-          <button
-            class="inline-flex items-center px-3 py-2 text-sm font-medium text-center text-white rounded-lg focus:ring-4 focus:outline-none bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-800"
-          >
-            Wake
-          </button>
-        {:else}
-          <button
-            on:click={() => {
-              myhosts[myhost[0]] = undefined;
-              localStorage.setItem("hosts", JSON.stringify(myhosts))
-            }}
-            class="inline-flex items-center px-3 py-2 text-sm font-medium text-center text-white rounded-lg focus:ring-4 focus:outline-none bg-red-600 hover:bg-red-700 focus:ring-red-800"
-          >
-            Remove
-          </button>
-        {/if}
-      </div>
-    {/each}
+    {#if Object.keys($hosts).length !== 0}
+      {#each Object.entries($hosts) as myhost}
+        <div
+          class="{editmode
+            ? 'moveFromSideToSide'
+            : ''} max-w-sm m-4 p-6 border rounded-lg shadow-md bg-stone-800 border-stone-700"
+        >
+          <h5 class="mb-2 text-2xl font-bold tracking-tight text-white">
+            {myhost[1].friendlyname}
+          </h5>
+          <p class="mb-3 font-normal text-stone-400">
+            {myhost[1].macadress} : {myhost[1].port}
+          </p>
+          {#if !editmode}
+            <button
+              on:click={() => {
+                fetch(myhost[1].url + "/api/wake", {
+                  method: "POST",
+                  headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    passwd: myhost[1].token,
+                    target: myhost[0],
+                  }),
+                });
+              }}
+              class="inline-flex items-center px-3 py-2 text-sm font-medium text-center text-white rounded-lg focus:ring-4 focus:outline-none bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-800"
+            >
+              Wake
+            </button>
+          {:else}
+            <button
+              on:click={() => {
+                deleteProperty(myhost[0]);
+              }}
+              class="inline-flex items-center px-3 py-2 text-sm font-medium text-center text-white rounded-lg focus:ring-4 focus:outline-none bg-red-600 hover:bg-red-700 focus:ring-red-800"
+            >
+              Remove
+            </button>
+          {/if}
+        </div>
+      {/each}
+    {:else}
+      <p class="text-white">Hi</p>
+    {/if}
   </div>
 </main>
 <footer
