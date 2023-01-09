@@ -24,7 +24,7 @@
 
   type GetServersFn = () => Promise<ServersResponse>;
 
-  const getServers:GetServersFn = async () => {
+  const getServers: GetServersFn = async () => {
     const response = await fetch(
       JSON.parse(sessionStorage.getItem("host")).url +
         "/api/list/boxes?passwd=" +
@@ -63,6 +63,34 @@
     const newStore = { ...$hosts, [key]: value };
     hosts.set(newStore);
   }
+
+  let konamiCode = [
+    "ArrowUp",
+    "ArrowUp",
+    "ArrowDown",
+    "ArrowDown",
+    "ArrowLeft",
+    "ArrowRight",
+    "ArrowLeft",
+    "ArrowRight",
+    "b",
+    "a",
+  ];
+  let currentPosition = 0;
+
+  window.addEventListener("keydown", (event) => {
+    if (event.key === konamiCode[currentPosition]) {
+      currentPosition++;
+
+      if (currentPosition === konamiCode.length) {
+        content = "secret-menu";
+        showModal = true;
+        currentPosition = 0;
+      }
+    } else {
+      currentPosition = 0;
+    }
+  });
 </script>
 
 {#if showModal}
@@ -78,7 +106,11 @@
         <div
           class="flex items-start justify-between p-5 border-b border-solid border-emeraldstone-200 rounded-t"
         >
-          <h3 class="text-3xl font-semibold">Add Host</h3>
+          <h3 class="text-3xl font-semibold">
+            {content === "start" || content === "select-hosts"
+              ? "Add Host"
+              : "Secret Jonte Menu"}
+          </h3>
           <button
             class="p-1 ml-auto bg-transparent border-0 text-black opacity-5 float-right text-3xl leading-none font-semibold outline-none focus:outline-none"
             on:click={toggleModal}
@@ -140,12 +172,27 @@
               {:catch ERROR_VAR}
                 <b>Error {ERROR_VAR}</b>
               {/await}
+            {:else if content === "secret-menu"}
+              <button
+                  on:click={() => {
+                    addKey("rick-pc-"+Math.floor(Math.random() * 100), {
+                      friendlyname: "Rick's PC",
+                      macadress:"41-53-54-4C-45-59",
+                      port:9,
+                      token:"not-telling-you",
+                      url:"https://og.ax"
+                    })}}
+                class="w-48 ml-2 text-sm font-medium text-stone-300 p-2 rounded shadow-lg bg-emerald-600"
+                >Add Dummy Data</button
+              >
             {/if}
           </span>
-          <p class="text-sm text-stone-400">
-            Please rest assured that this information is stored in your
-            browser's localStorage. This never touches my servers.
-          </p>
+          {#if content !== "secret-menu"}
+            <p class="text-sm text-stone-400">
+              Please rest assured that this information is stored in your
+              browser's localStorage. This never touches my servers.
+            </p>
+          {/if}
         </div>
         <div
           class="flex items-center justify-end p-6 border-t border-solid border-emeraldstone-200 rounded-b"
