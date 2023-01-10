@@ -41,7 +41,6 @@
       result[key].token = JSON.parse(sessionStorage.getItem("host")).token;
       result[key].url = JSON.parse(sessionStorage.getItem("host")).url;
     }
-    result.token = JSON.parse(sessionStorage.getItem("host")).token;
     return result;
   };
 
