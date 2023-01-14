@@ -9,22 +9,11 @@
     showModal = !showModal;
   }
 
-  interface Server {
-    friendlyname: string;
-    macadress: string;
-    ip: string;
-    port: number;
-    token: string;
-    url: string;
-  }
+  let fetchedData;
 
-  interface ServersResponse {
-    [key: string]: Server;
-  }
+  let loadingstate = {};
 
-  type GetServersFn = () => Promise<ServersResponse>;
-
-  const getServers: GetServersFn = async () => {
+  const getServers = async () => {
     const response = await fetch(
       JSON.parse(sessionStorage.getItem("host")).url +
         "/api/list/boxes?passwd=" +
@@ -36,19 +25,24 @@
         },
       }
     );
-    let result = await response.json();
+    const result = await response.json();
     for (const key in result) {
       result[key].token = JSON.parse(sessionStorage.getItem("host")).token;
       result[key].url = JSON.parse(sessionStorage.getItem("host")).url;
     }
-    return result;
+    const res = Object.entries(result);
+    if (devMode) {
+      console.log(res);
+    }
+    fetchedData = res;
+    content = "select-hosts";
   };
-
-  let serverPromise = getServers();
 
   let api_token: string, api_url: string;
 
   import { hosts } from "./stores/hosts";
+
+  import { devMode } from "./stores/settings";
 
   let editmode = false;
 
@@ -56,11 +50,14 @@
     const newStore = { ...$hosts };
     delete newStore[key];
     hosts.set(newStore);
+    added[key] = false;
   }
 
   function addKey(key: string, value: any) {
     const newStore = { ...$hosts, [key]: value };
     hosts.set(newStore);
+    added[key] = true;
+    console.log(added);
   }
 
   let konamiCode = [
@@ -90,6 +87,8 @@
       currentPosition = 0;
     }
   });
+
+  let added = {};
 </script>
 
 {#if showModal}
@@ -152,38 +151,48 @@
                 />
               </div>
             {:else if content === "select-hosts"}
-              {#await serverPromise}
-                <b>Loading block</b>
-              {:then RESULT_VAR}
-                <p>Click on the ones you would like to add.</p>
-                {#each Object.entries(RESULT_VAR) as host}
-                  <div class="flex items-center mb-4">
-                    <button
-                      on:click={() => {
+              <p>Click on the ones you would like to add.</p>
+              {#each fetchedData as host}
+                <div class="flex items-center mb-4">
+                  <button
+                    on:click={() => {
+                      if (added[host[0]]) {
+                        deleteProperty(host[0]);
+                      } else {
                         addKey(host[0], host[1]);
-                      }}
-                      class="w-48 ml-2 text-sm font-medium text-stone-300 p-2 rounded shadow-lg bg-emerald-600"
-                    >
-                      {host[1].friendlyname}
-                    </button>
-                  </div>
-                {/each}
-              {:catch ERROR_VAR}
-                <b>Error {ERROR_VAR}</b>
-              {/await}
+                      }
+                    }}
+                    class={"w-48 ml-2 text-sm font-medium text-stone-300 p-2 rounded shadow-lg " +
+                      (added[host[0]] ? "bg-emerald-600" : "bg-stone-700")}
+                  >
+                    {host[1].friendlyname}
+                  </button>
+                </div>
+              {/each}
             {:else if content === "secret-menu"}
-              <button
+              <div>
+                <button
                   on:click={() => {
-                    addKey("rick-pc-"+Math.floor(Math.random() * 100), {
+                    addKey("rick-pc-" + Math.floor(Math.random() * 100), {
                       friendlyname: "Rick's PC",
-                      macadress:"41-53-54-4C-45-59",
-                      port:9,
-                      token:"not-telling-you",
-                      url:"https://og.ax"
-                    })}}
-                class="w-48 ml-2 text-sm font-medium text-stone-300 p-2 rounded shadow-lg bg-emerald-600"
-                >Add Dummy Data</button
-              >
+                      macadress: "41-53-54-4C-45-59",
+                      port: 9,
+                      token: "not-telling-you",
+                      url: "https://og.ax",
+                    });
+                  }}
+                  class="w-48 ml-2 mb-2 text-sm font-medium text-stone-300 p-2 rounded shadow-lg bg-emerald-600"
+                  >Add Dummy Data</button
+                >
+                <button
+                  on:click={() => {
+                    devMode.update((d) => !d);
+                  }}
+                  class={"w-48 ml-2 mb-4 text-sm font-medium text-stone-300 p-2 rounded shadow-lg " +
+                    ($devMode ? "bg-emerald-600" : "bg-stone-700")}
+                  >Toggle Dev Mode</button
+                >
+              </div>
             {/if}
           </span>
           {#if content !== "secret-menu"}
@@ -218,7 +227,8 @@
                     token: api_token,
                   })
                 );
-                content = "select-hosts";
+
+                getServers();
               } else {
                 toggleModal();
               }
@@ -261,10 +271,10 @@
       >
     </div>
   </nav>
-  <div
-    class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
-  >
-    {#if Object.keys($hosts).length !== 0}
+  {#if Object.keys($hosts).length !== 0}
+    <div
+      class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+    >
       {#each Object.entries($hosts) as myhost}
         <div
           class="{editmode
@@ -280,6 +290,7 @@
           {#if !editmode}
             <button
               on:click={() => {
+                loadingstate[myhost[0]] = "Loading";
                 fetch(myhost[1].url + "/api/wake", {
                   method: "POST",
                   headers: {
@@ -290,11 +301,22 @@
                     passwd: myhost[1].token,
                     target: myhost[0],
                   }),
-                });
+                })
+                  .then((res) => {
+                    if (res.status === 200) {
+                      loadingstate[myhost[0]] = "Success";
+                      setTimeout(() => {loadingstate[myhost[0]] = "Wake"},2000);
+                    } else {
+                      loadingstate[myhost[0]] = "Error: "+res.status;
+                    }
+                  })
+                  .catch((err) => {
+                    loadingstate[myhost[0]] = "Error";
+                  });
               }}
-              class="inline-flex items-center px-3 py-2 text-sm font-medium text-center text-white rounded-lg focus:ring-4 focus:outline-none bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-800"
+              class={"inline-flex items-center px-3 py-2 text-sm font-medium text-center text-white rounded-lg focus:ring-4 focus:outline-none "+(loadingstate[myhost[0]] === "Loading" ? "bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-800" : "bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-800")}
             >
-              Wake
+              {loadingstate[myhost[0]] || "Wake"}
             </button>
           {:else}
             <button
@@ -308,10 +330,26 @@
           {/if}
         </div>
       {/each}
-    {:else}
-      <p class="text-white">Hi</p>
-    {/if}
-  </div>
+    </div>
+  {:else}
+    <div
+      class="py-8 px-4 mx-auto max-w-screen-xl text-center lg:py-16 lg:px-12"
+    >
+      <h1
+        class="mb-4 text-4xl font-extrabold tracking-tight leading-none text-gray-900 md:text-5xl lg:text-6xl dark:text-white"
+      >
+        <span
+          class="text-transparent font-extrabold bg-clip-text bg-gradient-to-br from-emerald-400 to-green-300"
+          >Wake on Wan</span
+        > has Never Been Easier
+      </h1>
+      <p class="text-gray-400">
+        Hello, friend! This is a simple web app that allows you to securely wake
+        your devices from anywhere in the world, using Wake on Lan. To get
+        started, click the <strong>Add Host</strong> button in the top right corner.
+      </p>
+    </div>
+  {/if}
 </main>
 <footer
   class="p-4 rounded-lg shadow md:flex md:items-center md:justify-between md:p-6 bg-stone-800"
