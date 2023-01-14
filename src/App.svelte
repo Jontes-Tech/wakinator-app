@@ -15,7 +15,8 @@
 
   const getServers = async () => {
     const response = await fetch(
-      JSON.parse(sessionStorage.getItem("host")).url +
+      "https://" +
+        JSON.parse(sessionStorage.getItem("host")).url +
         "/api/list/boxes?passwd=" +
         encodeURIComponent(JSON.parse(sessionStorage.getItem("host")).token),
       {
@@ -129,14 +130,14 @@
                 <label
                   for="api_url"
                   class="block mb-2 text-sm font-medbind:value={api_url}ium text-white"
-                  >API URL</label
+                  >API URL (no protocol)</label
                 >
                 <input
                   type="url"
                   id="api_url"
                   bind:value={api_url}
                   class="border text-sm rounded-lg block w-80 p-2.5 bg-stone-700 border-stone-600 placeholder-stone-400 text-white focus:ring-emerald-500 focus:border-emerald-500"
-                  placeholder="https://wake-homelab.jontes.page:1234"
+                  placeholder="wake-homelab.jontes.page:1234"
                 />
               </div>
               <div class="mb-6">
@@ -293,7 +294,7 @@
             <button
               on:click={() => {
                 loadingstate[myhost[0]] = "Loading";
-                fetch(myhost[1].url + "/api/wake", {
+                fetch("https://" + myhost[1].url + "/api/wake", {
                   method: "POST",
                   headers: {
                     Accept: "application/json",
@@ -307,16 +308,21 @@
                   .then((res) => {
                     if (res.status === 200) {
                       loadingstate[myhost[0]] = "Success";
-                      setTimeout(() => {loadingstate[myhost[0]] = "Wake"},2000);
+                      setTimeout(() => {
+                        loadingstate[myhost[0]] = "Wake";
+                      }, 2000);
                     } else {
-                      loadingstate[myhost[0]] = "Error: "+res.status;
+                      loadingstate[myhost[0]] = "Error: " + res.status;
                     }
                   })
                   .catch((err) => {
                     loadingstate[myhost[0]] = "Error";
                   });
               }}
-              class={"inline-flex items-center px-3 py-2 text-sm font-medium text-center text-white rounded-lg focus:ring-4 focus:outline-none "+(loadingstate[myhost[0]] === "Loading" ? "bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-800" : "bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-800")}
+              class={"inline-flex items-center px-3 py-2 text-sm font-medium text-center text-white rounded-lg focus:ring-4 focus:outline-none " +
+                (loadingstate[myhost[0]] === "Loading"
+                  ? "bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-800"
+                  : "bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-800")}
             >
               {loadingstate[myhost[0]] || "Wake"}
             </button>
