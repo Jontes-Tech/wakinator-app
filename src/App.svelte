@@ -57,7 +57,9 @@
     const newStore = { ...$hosts, [key]: value };
     hosts.set(newStore);
     added[key] = true;
-    console.log(added);
+    if (devMode) {
+      console.log(added);
+    }
   }
 
   let konamiCode = [
