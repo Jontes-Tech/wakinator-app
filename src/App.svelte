@@ -226,7 +226,7 @@
                 sessionStorage.setItem(
                   "host",
                   JSON.stringify({
-                    url: "https://"+api_url.replace(/\/$/, ""),
+                    url: api_url.replace(/\/$/, ""),
                     token: api_token,
                   })
                 );
