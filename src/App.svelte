@@ -9,7 +9,7 @@
     showModal = !showModal;
   }
 
-  let fetchedData;
+  let fetchedData: any;
 
   let loadingstate = {};
 
@@ -92,6 +92,14 @@
   });
 
   let added = {};
+
+  console.log(
+    "%cHello, Fellow Hacker!",
+    "font-size: 36px; font-weight: bold"
+  );
+  console.log(
+    "Feel free to poke around, if you find anything of concern, please file a GitHub Issue. Speaking of, the source is available at https://github.com/Jontes-Tech/wakinator-app"
+  );
 </script>
 
 {#if showModal}
@@ -129,7 +137,7 @@
               <div class="mb-6">
                 <label
                   for="api_url"
-                  class="block mb-2 text-sm font-medbind:value={api_url}ium text-white"
+                  class="block mb-2 text-sm font-medbind:value=ium text-white"
                   >API URL (no protocol)</label
                 >
                 <input
@@ -181,7 +189,7 @@
                       macadress: "41-53-54-4C-45-59",
                       port: 9,
                       token: "not-telling-you",
-                      url: "https://og.ax",
+                      url: "og.ax",
                     });
                   }}
                   class="w-48 ml-2 mb-2 text-sm font-medium text-stone-300 p-2 rounded shadow-lg bg-emerald-600"
@@ -284,9 +292,9 @@
             ? 'moveFromSideToSide'
             : ''} max-w-sm m-4 p-6 border rounded-lg shadow-md bg-stone-800 border-stone-700"
         >
-          <h5 class="mb-2 text-2xl font-bold tracking-tight text-white">
+          <h2 class="inline-flex mb-2 text-2xl font-bold tracking-tight text-white">
             {myhost[1].friendlyname}
-          </h5>
+          </h2>
           <p class="mb-3 font-normal text-stone-400">
             {myhost[1].macadress} : {myhost[1].port}
           </p>
@@ -313,10 +321,16 @@
                       }, 2000);
                     } else {
                       loadingstate[myhost[0]] = "Error: " + res.status;
+                      setTimeout(() => {
+                        loadingstate[myhost[0]] = "Wake";
+                      }, 2000);
                     }
                   })
                   .catch((err) => {
                     loadingstate[myhost[0]] = "Error";
+                    setTimeout(() => {
+                      loadingstate[myhost[0]] = "Wake";
+                    }, 2000);
                   });
               }}
               class={"inline-flex items-center px-3 py-2 text-sm font-medium text-center text-white rounded-lg focus:ring-4 focus:outline-none " +
@@ -341,21 +355,10 @@
     </div>
   {:else}
     <div
-      class="py-8 px-4 mx-auto max-w-screen-xl text-center lg:py-16 lg:px-12"
+      class="p-4"
     >
-      <h1
-        class="mb-4 text-4xl font-extrabold tracking-tight leading-none text-gray-900 md:text-5xl lg:text-6xl dark:text-white"
-      >
-        <span
-          class="text-transparent font-extrabold bg-clip-text bg-gradient-to-br from-emerald-400 to-green-300"
-          >Wake on Wan</span
-        > has Never Been Easier
-      </h1>
-      <p class="text-gray-400">
-        Hello, friend! This is a simple web app that allows you to securely wake
-        your devices from anywhere in the world, using Wake on Lan. To get
-        started, click the <strong>Add Host</strong> button in the top right corner.
-      </p>
+    <h1 class="font-bold text-white text-2xl">No computers added</h1>
+    <p class="text-gray-200">Welcome to Wakinator! Click "Add Host" to get started!</p>
     </div>
   {/if}
 </main>
