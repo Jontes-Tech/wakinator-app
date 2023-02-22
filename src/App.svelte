@@ -17,12 +17,12 @@
     const response = await fetch(
       "https://" +
         JSON.parse(sessionStorage.getItem("host")).url +
-        "/api/list/boxes?passwd=" +
-        encodeURIComponent(JSON.parse(sessionStorage.getItem("host")).token),
+        "/api/list/boxes",
       {
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
+          Authorization: JSON.parse(sessionStorage.getItem("host")).token
         },
       }
     );
@@ -138,7 +138,7 @@
                 <label
                   for="api_url"
                   class="block mb-2 text-sm font-medbind:value=ium text-white"
-                  >API URL (no protocol)</label
+                  >API URL (no protocol, we only support HTTPS)</label
                 >
                 <input
                   type="url"
@@ -259,7 +259,7 @@
 {/if}
 <main class="bg-stone-900 min-h-screen">
   <nav
-    class="border-b-2 border-emerald-800 shadow-xl px-2 sm:px-4 py-2.5 rounded bg-stone-900"
+    class="border-b-2 border-emerald-800 shadow-xl py-2.5 rounded"
   >
     <div class="container flex flex-wrap items-center justify-between mx-auto">
       <span
@@ -307,6 +307,7 @@
                   headers: {
                     Accept: "application/json",
                     "Content-Type": "application/json",
+                    Authorization: JSON.parse(sessionStorage.getItem("host")).token
                   },
                   body: JSON.stringify({
                     passwd: myhost[1].token,
