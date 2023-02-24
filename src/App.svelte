@@ -3,6 +3,10 @@
   const params = new URLSearchParams(window.location.search);
   let showModal = params.get("showModal") ? true : false;
   let content = params.get("content");
+  let active = {
+    name: "",
+    token: ""
+  };
   if (showModal && !content) content = "start";
 
   function toggleModal() {
@@ -22,7 +26,7 @@
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
-          Authorization: JSON.parse(sessionStorage.getItem("host")).token
+          Authorization: JSON.parse(sessionStorage.getItem("host")).token,
         },
       }
     );
@@ -93,10 +97,7 @@
 
   let added = {};
 
-  console.log(
-    "%cHello, Fellow Hacker!",
-    "font-size: 36px; font-weight: bold"
-  );
+  console.log("%cHello, Fellow Hacker!", "font-size: 36px; font-weight: bold");
   console.log(
     "Feel free to poke around, if you find anything of concern, please file a GitHub Issue. Speaking of, the source is available at https://github.com/Jontes-Tech/wakinator-app"
   );
@@ -118,6 +119,8 @@
           <h3 class="text-3xl font-semibold">
             {content === "start" || content === "select-hosts"
               ? "Add Host"
+              : content === "settings"
+              ? active.name + " Settings"
               : "Secret Jonte Menu"}
           </h3>
           <button
@@ -204,9 +207,13 @@
                   >Toggle Dev Mode</button
                 >
               </div>
+            {:else if content === "settings"}
+            <p class="overflow-x-scroll">
+             {active.token}
+            </p>
             {/if}
           </span>
-          {#if content !== "secret-menu"}
+          {#if content !== "secret-menu" && content !== "settings"}
             <p class="text-sm text-stone-400">
               Please rest assured that this information is stored in your
               browser's localStorage. This never touches my servers.
@@ -258,9 +265,7 @@
   <div class="opacity-25 fixed inset-0 z-40 bg-black" />
 {/if}
 <main class="bg-stone-900 min-h-screen">
-  <nav
-    class="border-b-2 border-emerald-800 shadow-xl py-2.5 rounded"
-  >
+  <nav class="border-b-2 border-emerald-800 shadow-xl py-2.5 rounded">
     <div class="container flex flex-wrap items-center justify-between mx-auto">
       <span
         class="flex flex-col self-center text-xl font-semibold whitespace-nowrap text-white p-0"
@@ -292,7 +297,9 @@
             ? 'moveFromSideToSide'
             : ''} max-w-sm m-4 p-6 border rounded-lg shadow-md bg-stone-800 border-stone-700"
         >
-          <h2 class="inline-flex mb-2 text-2xl font-bold tracking-tight text-white">
+          <h2
+            class="inline-flex mb-2 text-2xl font-bold tracking-tight text-white"
+          >
             {myhost[1].friendlyname}
           </h2>
           <p class="mb-3 font-normal text-stone-400">
@@ -307,7 +314,8 @@
                   headers: {
                     Accept: "application/json",
                     "Content-Type": "application/json",
-                    Authorization: JSON.parse(sessionStorage.getItem("host")).token
+                    Authorization: JSON.parse(sessionStorage.getItem("host"))
+                      .token,
                   },
                   body: JSON.stringify({
                     passwd: myhost[1].token,
@@ -341,6 +349,31 @@
             >
               {loadingstate[myhost[0]] || "Wake"}
             </button>
+            <button
+              class="m-2"
+              on:click={() => {
+                showModal = true;
+                content = "settings";
+                active.name = myhost[1].friendlyname;
+                active.token = "Loading"
+                fetch("https://" + myhost[1].url + "/api/identify", {
+                    method: "GET",
+                    headers: {
+                      Authorization: myhost[1].token,
+                    },
+                  }).then((resp) => {
+                    if (resp.ok) {
+                      resp.text().then((text) => {
+                        active.token = "Hashed Token: "+text
+                      });
+                    } else {
+                      console.log("Error!");
+                    }
+                  });
+              }}
+            >
+              ⚙️
+            </button>
           {:else}
             <button
               on:click={() => {
@@ -355,11 +388,15 @@
       {/each}
     </div>
   {:else}
-    <div
-      class="p-4"
-    >
-    <h1 class="font-bold text-white text-2xl">No computers added</h1>
-    <p class="text-gray-200">Welcome to Wakinator! Click "Add Host" to get started!</p>
+    <div class="p-4">
+      <h1 class="font-bold text-white text-2xl">No computers added</h1>
+      <p class="text-gray-200">
+        Welcome to Wakinator! Follow the <a
+          class="text-emerald-500 font-bold hover:underline"
+          href="https://github.com/Jontes-Tech/wakinator/wiki/Getting-Started-(Native)"
+          >Guide</a
+        > to get started!
+      </p>
     </div>
   {/if}
 </main>
